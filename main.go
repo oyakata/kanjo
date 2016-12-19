@@ -59,12 +59,7 @@ func WordCountHandler(w http.ResponseWriter, r *http.Request) {
 	text := r.FormValue("text")
 	count := utf8.RuneCountInString(text)
 
-	css := ""
-	if count == 0 {
-		css = "err"
-	}
-
-	content := fmt.Sprintf(`
+	wc, _ := htmlTemplate.New("wc").Parse(`
 	<html>
 		<head>
 			<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -77,18 +72,27 @@ func WordCountHandler(w http.ResponseWriter, r *http.Request) {
 		<body>
 			<h1>文字数カウント結果</h1>
 
-			入力文字: %v<br>
-			文字数は: %v<br>
+			入力文字: {{.text}}<br>
+			文字数は: {{.count}}<br>
 
 			でした。<br><br>
 
 			文字を入力してください。
 			<form action="/count" method="GET">
-			<input type="text" name="text" size="32" class="%v">
+			<input type="text" name="text" size="32" class="{{.css}}">
 			<input type="submit">
 			</form>
 		</body>
-	</html>`, htmlTemplate.HTMLEscapeString(text), count, css)
+	</html>`)
 
-	w.Write([]byte(content))
+	css := ""
+	if count == 0 {
+		css = "err"
+	}
+
+	type Context map[string]interface{}
+	data := Context{"text": text, "count": count, "css": css}
+	if err := wc.Execute(w, data); err != nil {
+		log.Panic(err)
+	}
 }
