@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	htmlTemplate "html/template"
 	"log"
 	"net/http"
+	"unicode/utf8"
 )
 
 func init() {
@@ -45,17 +47,17 @@ func TopPageHandler(w http.ResponseWriter, r *http.Request) {
 func WordCountHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
-	// 1. テンプレートエンジンを使って処理するよう変更
+	// 1. [済]テンプレートエンジンを使って処理するよう変更
 	// 2. JSONで返却する機能を追加
 	// 3. ファイルを読み取って文字数を数える機能を追加
 	// 4. 文字数とバイト数を数えるよう変更
 	// 5. ユニットテストを追加
-	// 6. 最初のプログラムだと文字数ではなくバイト数を返してしまうので直す
+	// 6. [済]最初のプログラムだと文字数ではなくバイト数を返してしまうので直す
 	// 7. logをファイルに出力するよう変更
-	// 8. HTMLのエスケープがないので直す
+	// 8. [済]HTMLのエスケープがないので直す
 
 	text := r.FormValue("text")
-	count := len(text)
+	count := utf8.RuneCountInString(text)
 
 	css := ""
 	if count == 0 {
@@ -86,7 +88,7 @@ func WordCountHandler(w http.ResponseWriter, r *http.Request) {
 			<input type="submit">
 			</form>
 		</body>
-	</html>`, text, count, css)
+	</html>`, htmlTemplate.HTMLEscapeString(text), count, css)
 
 	w.Write([]byte(content))
 }
