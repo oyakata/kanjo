@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	htmlTemplate "html/template"
 	"log"
@@ -45,12 +46,42 @@ func TopPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func WordCountHandler(w http.ResponseWriter, r *http.Request) {
+	if r.FormValue("format") == "json" {
+		JSONWordCountHandler(w, r)
+	} else {
+		HTMLWordCountHandler(w, r)
+	}
+}
+
+func JSONWordCountHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	text := r.FormValue("text")
+	count := utf8.RuneCountInString(text)
+	bc := len(text)
+
+	// json.Marshalは構造体の公開フィールドしか出力してくれないので注意。
+	// 小文字でJSONのキーを出力したければタグを指定する。
+	type WordCount struct {
+		Text      string `json:"text"`
+		Count     int    `json:"count"`
+		ByteCount int    `json:"byte_count"`
+	}
+
+	result, err := json.Marshal(WordCount{text, count, bc})
+	if err != nil {
+		log.Panic(err)
+	}
+	w.Write(result)
+}
+
+func HTMLWordCountHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	// 1. [済]テンプレートエンジンを使って処理するよう変更
-	// 2. JSONで返却する機能を追加
+	// 2. [済]JSONで返却する機能を追加
 	// 3. ファイルを読み取って文字数を数える機能を追加
-	// 4. 文字数とバイト数を数えるよう変更
+	// 4. [済]文字数とバイト数を数えるよう変更
 	// 5. ユニットテストを追加
 	// 6. [済]最初のプログラムだと文字数ではなくバイト数を返してしまうので直す
 	// 7. logをファイルに出力するよう変更
