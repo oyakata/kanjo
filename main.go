@@ -52,6 +52,7 @@ func WordCountHandler(w http.ResponseWriter, r *http.Request) {
 	// 5. ユニットテストを追加
 	// 6. 最初のプログラムだと文字数ではなくバイト数を返してしまうので直す
 	// 7. logをファイルに出力するよう変更
+	// 8. HTMLのエスケープがないので直す
 
 	text := r.FormValue("text")
 	count := len(text)
