@@ -49,6 +49,7 @@ func WordCountHandler(w http.ResponseWriter, r *http.Request) {
 	// 2. JSONで返却する機能を追加
 	// 3. ファイルを読み取って文字数を数える機能を追加
 	// 4. 文字数とバイト数を数えるよう変更
+	// 5. ユニットテストを追加
 
 	text := r.FormValue("text")
 	count := len(text)
