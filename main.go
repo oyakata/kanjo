@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/oyakata/kanjo/lib/wc"
 	htmlTemplate "html/template"
-	"io"
 	"log"
 	"net/http"
-	"unicode/utf8"
 )
 
 func init() {
@@ -53,26 +51,9 @@ func FileWordCountHandler(w http.ResponseWriter, r *http.Request) {
 		r.MultipartForm.RemoveAll()
 	}()
 
-	in := bufio.NewReader(file)
-	count := 0
-	bc := 0
-	invalid := 0
+	count, bc, invalid := wc.WordCountInFile(file)
 
-	for {
-		r, size, err := in.ReadRune()
-		if err == io.EOF {
-			break
-		}
-		if r == utf8.RuneError {
-			invalid += size
-		} else {
-			bc += size
-			// 正常な文字だけカウントする。
-			count++
-		}
-	}
-
-	wc, _ := htmlTemplate.New("file_wc").Parse(`
+	tmpl, _ := htmlTemplate.New("file_wc").Parse(`
 	<html>
 		<head>
 			<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -111,7 +92,7 @@ func FileWordCountHandler(w http.ResponseWriter, r *http.Request) {
 		"bc":      bc,
 		"invalid": invalid,
 	}
-	if err := wc.Execute(w, data); err != nil {
+	if err := tmpl.Execute(w, data); err != nil {
 		log.Panic(err)
 	}
 }
@@ -157,8 +138,7 @@ func JSONWordCountHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	text := r.FormValue("text")
-	count := utf8.RuneCountInString(text)
-	bc := len(text)
+	count, bc, _ := wc.WordCountInString(text)
 
 	// json.Marshalは構造体の公開フィールドしか出力してくれないので注意。
 	// 小文字でJSONのキーを出力したければタグを指定する。
@@ -179,9 +159,9 @@ func HTMLWordCountHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	text := r.FormValue("text")
-	count := utf8.RuneCountInString(text)
+	count, _, _ := wc.WordCountInString(text)
 
-	wc, _ := htmlTemplate.New("wc").Parse(`
+	tmpl, _ := htmlTemplate.New("wc").Parse(`
 	<html>
 		<head>
 			<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -213,7 +193,7 @@ func HTMLWordCountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := Context{"text": text, "count": count, "css": css}
-	if err := wc.Execute(w, data); err != nil {
+	if err := tmpl.Execute(w, data); err != nil {
 		log.Panic(err)
 	}
 }
