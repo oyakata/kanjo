@@ -134,19 +134,19 @@ func WordCountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// json.Marshalは構造体の公開フィールドしか出力してくれないので注意。
+// 小文字でJSONのキーを出力したければタグを指定する。
+type WordCount struct {
+	Text      string `json:"text"`
+	Count     int    `json:"count"`
+	ByteCount int    `json:"byte_count"`
+}
+
 func JSONWordCountHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	text := r.FormValue("text")
 	count, bc, _ := wc.WordCountInString(text)
-
-	// json.Marshalは構造体の公開フィールドしか出力してくれないので注意。
-	// 小文字でJSONのキーを出力したければタグを指定する。
-	type WordCount struct {
-		Text      string `json:"text"`
-		Count     int    `json:"count"`
-		ByteCount int    `json:"byte_count"`
-	}
 
 	result, err := json.Marshal(WordCount{text, count, bc})
 	if err != nil {
