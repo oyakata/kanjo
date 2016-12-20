@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	htmlTemplate "html/template"
@@ -25,6 +26,17 @@ func main() {
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }
 
+// 1. [済]テンプレートエンジンを使って処理するよう変更
+// 2. [済]JSONで返却する機能を追加
+// 3. [済]ファイルを読み取って文字数を数える機能を追加
+// 4. [済]文字数とバイト数を数えるよう変更
+// 5. ユニットテストを追加
+// 6. [済]最初のプログラムだと文字数ではなくバイト数を返してしまうので直す
+// 7. logをファイルに出力するよう変更
+// 8. [済]HTMLのエスケープがないので直す
+
+type Context map[string]interface{}
+
 func FileWordCountHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "POSTでアクセスしてください", http.StatusMethodNotAllowed)
@@ -41,51 +53,67 @@ func FileWordCountHandler(w http.ResponseWriter, r *http.Request) {
 		r.MultipartForm.RemoveAll()
 	}()
 
-	// KB := 1024
-	base := make([]byte, 8)
+	in := bufio.NewReader(file)
+	count := 0
+	bc := 0
+	invalid := 0
 
-L:
 	for {
-		n, err := file.Read(base)
-
-		if n > 0 {
-			b := base[:n]
-			for len(b) > 0 {
-				r, size := utf8.DecodeRune(b)
-
-				if r != utf8.RuneError {
-					log.Printf("CHAR: %c\t%v\n", r, size)
-					b = b[size:]
-				} else {
-					n, err := file.Read(base)
-					log.Printf("INVALID: %v", b)
-					log.Printf("APPEND: %v", base[:n])
-					break L
-					if err == io.EOF || n == 0 {
-						break L
-					}
-
-					if err != nil {
-						log.Print(err)
-						break L
-					}
-
-					b = append(b, base[:n]...)
-					// log.Printf("APPEND: %v :__APPEND__", string(b))
-				}
-			}
-		}
-
+		r, size, err := in.ReadRune()
 		if err == io.EOF {
 			break
 		}
-
-		if err != nil {
-			log.Print(err)
-			break
+		if r == utf8.RuneError {
+			invalid += size
+		} else {
+			bc += size
+			// 正常な文字だけカウントする。
+			count++
 		}
 	}
-	fmt.Println()
+
+	wc, _ := htmlTemplate.New("file_wc").Parse(`
+	<html>
+		<head>
+			<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+			<title>文字数カウント結果</title>
+			<style type="text/css">
+				.err { border: solid 1px red; }
+			</style>
+		</head>
+
+		<body>
+			<h1>文字数カウント結果</h1>
+
+			文字数は: {{.count}}<br>
+			バイト数は: {{.bc}}<br>
+			不正なバイト数は: {{.invalid}}<br>
+
+			でした。<br><br>
+
+			文字を入力してください。
+			<form action="/count" method="GET">
+			<input type="text" name="text" size="32">
+			<input type="submit">
+			</form>
+
+			ファイルを調べたい場合はこちら。
+			<form action="/count/file" method="POST" enctype="multipart/form-data">
+			<input type="file" name="file">
+			<input type="submit">
+			</form>
+
+		</body>
+	</html>`)
+
+	data := Context{
+		"count":   count,
+		"bc":      bc,
+		"invalid": invalid,
+	}
+	if err := wc.Execute(w, data); err != nil {
+		log.Panic(err)
+	}
 }
 
 func TopPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -150,15 +178,6 @@ func JSONWordCountHandler(w http.ResponseWriter, r *http.Request) {
 func HTMLWordCountHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
-	// 1. [済]テンプレートエンジンを使って処理するよう変更
-	// 2. [済]JSONで返却する機能を追加
-	// 3. ファイルを読み取って文字数を数える機能を追加
-	// 4. [済]文字数とバイト数を数えるよう変更
-	// 5. ユニットテストを追加
-	// 6. [済]最初のプログラムだと文字数ではなくバイト数を返してしまうので直す
-	// 7. logをファイルに出力するよう変更
-	// 8. [済]HTMLのエスケープがないので直す
-
 	text := r.FormValue("text")
 	count := utf8.RuneCountInString(text)
 
@@ -193,7 +212,6 @@ func HTMLWordCountHandler(w http.ResponseWriter, r *http.Request) {
 		css = "err"
 	}
 
-	type Context map[string]interface{}
 	data := Context{"text": text, "count": count, "css": css}
 	if err := wc.Execute(w, data); err != nil {
 		log.Panic(err)
