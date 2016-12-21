@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/oyakata/kanjo/lib/drawing"
 	"github.com/oyakata/kanjo/lib/wc"
 	htmlTemplate "html/template"
 	"log"
@@ -13,6 +14,7 @@ func init() {
 	// URLパターンに正規表現は渡せない。
 	http.HandleFunc("/count/file", FileWordCountHandler)
 	http.HandleFunc("/count", WordCountHandler)
+	http.HandleFunc("/newyear", drawing.DrawingHandler)
 
 	// 順番に注意。"/"を先頭に指定すると他のPathがマッチしない。
 	http.HandleFunc("/", TopPageHandler)
