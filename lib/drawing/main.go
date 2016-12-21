@@ -12,7 +12,7 @@ type Circle struct {
 	X, Y, R float64
 }
 
-var Inside = func(c Circle, x, y int) bool {
+func (c *Circle) Inside(x, y int) bool {
 	// sqrt((x-a)^2 + (y-b)^2) は二点(x, y), (a, b)間の距離
 	// これが(x, y)を中心とする円の半径r以内の長さであれば円の内側
 
@@ -50,10 +50,10 @@ func NewImage() *image.RGBA {
 	for x := 0; x < w; x++ {
 		for y := 0; y < h; y++ {
 			var c color.RGBA
-			if Inside(small, x, y) {
+			if small.Inside(x, y) {
 				// ちっちゃい円の中にある座標はオレンジ色(橙の絵)
 				c = orange
-			} else if Inside(large, x, y) || Inside(middle, x, y) {
+			} else if large.Inside(x, y) || middle.Inside(x, y) {
 				// 大きい円、または中くらいの円の中にある座標は白(お餅の絵)
 				c = white
 			} else {
